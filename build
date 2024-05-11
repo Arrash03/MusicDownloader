@@ -1,0 +1,2 @@
+export PUPPETEER_PRODUCT=firefox
+npm install puppeteer --save

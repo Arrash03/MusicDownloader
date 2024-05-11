@@ -1,0 +1,22 @@
+{
+  "name": "music_downloader",
+  "version": "1.0.0",
+  "description": "download your musics in every website",
+  "main": "index.ts",
+  "type": "module",
+  "scripts": {
+    "start": "ts-node-dev index.ts",
+    "build": "npx tsc",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "puppeteer": "^22.8.0"
+  },
+  "devDependencies": {
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.4.5"
+  }
+}
