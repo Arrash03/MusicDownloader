@@ -1,4 +1,8 @@
 import puppeteer, {Browser, PuppeteerLaunchOptions, Page, GoToOptions} from "puppeteer";
+import Downloader from "./downloader.js";
+import fs from "fs";
+import fsPromise from 'fs/promises';
+import path from "path";
 
 interface IMusic {
     name: string,
@@ -33,7 +37,8 @@ export default class BiaMusic {
         // it need to be base on page numbers and connection speed
         timeout: 20000
     };
-    static MAX_OPEN_TAB: number = 5;
+    static MAX_OPEN_TAB= 5;
+    static MAX_CONCURRENT_DOWNLOAD_FILE = 5;
     static browser: Browser;
     url: string;
     musicUrls: IMusicUrls;
@@ -41,6 +46,8 @@ export default class BiaMusic {
     limit: number;
     page: null | Page;
     quality: Quality;
+    downloader: Downloader | null;
+
 
     constructor(singerName: string, url: string, quality: Quality, limit: number = 0) {
         this.url = url;
@@ -52,6 +59,7 @@ export default class BiaMusic {
         };
         this.page = null;
         this.quality = quality;
+        this.downloader = null;
     }
 
     private async createBrowser() {
@@ -97,14 +105,15 @@ export default class BiaMusic {
             temp.push(BiaMusic.browser.newPage());
         }
         const pages = await Promise.all(temp);
+        await Promise.all(pages.map(page => {
+            return page.setViewport({ width: 1920, height: 1080 });
+        }));
         let queue = [];
-        console.log(urls.length);
         for (let i = 0; i < urls.length; i+=BiaMusic.MAX_OPEN_TAB) {
             queue = pages.map(async (page, index) => {
                 try {
                     if (i + index >= urls.length)
                         return;
-                    console.log("-------------\n", i + index, "\n------------------")
                     await page.goto(urls[i + index].url, BiaMusic.GO_TO_OPTIONS);
                     let url;
                     if (this.quality === Quality._320) {
@@ -116,14 +125,46 @@ export default class BiaMusic {
                     }
                     urls[i + index].url = url;
                 } catch (err) {
-                    console.log(i + index);
                     if (err instanceof Error)
                         console.error(err.message);
                 }
             });
             await Promise.all(queue);
         }
-
+        await Promise.all(pages.map(page => {
+            page.close();
+        }));
         return urls;
+    }
+
+    public async download(downloadPath: string) {
+        const SINGLE_MUSIC_PATH = path.join(downloadPath, "single_musics");
+        const ALBUM_PATH = path.join(downloadPath, "albums");
+        if (!fs.existsSync(SINGLE_MUSIC_PATH))
+            await fsPromise.mkdir(SINGLE_MUSIC_PATH, {recursive: true});
+        if (!fs.existsSync(ALBUM_PATH))
+            await fsPromise.mkdir(ALBUM_PATH);
+        if (!this.downloader)
+            this.downloader = new Downloader(SINGLE_MUSIC_PATH)
+        await this.downloadSingleMusics();
+    }
+
+    private async downloadSingleMusics() {
+        let queue = [];
+        for (let i = 0; i < this.musicUrls.single_musics.length; i+=BiaMusic.MAX_CONCURRENT_DOWNLOAD_FILE) {
+            queue = Array.from(Array(BiaMusic.MAX_CONCURRENT_DOWNLOAD_FILE).keys())
+                .map(async (_, index) => {
+                    if (i + index >= this.musicUrls.single_musics.length)
+                        return;
+                    let music = this.musicUrls.single_musics[i + index];
+                    try {
+                        await this.downloader!.download(music.url, `${music.name}.mp3`)
+                    } catch (err) {
+                        if (err instanceof Error)
+                            console.error(err.message)
+                    }
+                });
+            await Promise.all(queue);
+        }
     }
 }
