@@ -1,5 +1,20 @@
 import puppeteer, {Browser, PuppeteerLaunchOptions, Page, GoToOptions} from "puppeteer";
 
+interface IMusic {
+    name: string,
+    url: string
+}
+
+interface IAlbum {
+    name: string,
+    musics: IMusic[]
+}
+
+interface IMusicUrls {
+    single_musics: IMusic[],
+    album_musics: IAlbum[]
+}
+
 export default class BiaMusic {
     // static URL: string = "https://biamusic.ir";
     static BROWSER_CONFIGS: PuppeteerLaunchOptions = {
@@ -14,7 +29,7 @@ export default class BiaMusic {
     };
     static browser: Browser;
     url: string;
-    musicUrls: string[];
+    musicUrls: IMusicUrls;
     singerName: string;
     limit: number;
     page: null | Page;
@@ -23,7 +38,10 @@ export default class BiaMusic {
         this.url = url;
         this.singerName = singerName;
         this.limit = Math.abs(limit);
-        this.musicUrls = [];
+        this.musicUrls = {
+            single_musics: [],
+            album_musics: []
+        };
         this.page = null;
     }
 
@@ -36,8 +54,31 @@ export default class BiaMusic {
     public async find() {
         await this.createBrowser();
         await this.page!.goto(this.url, BiaMusic.GO_TO_OPTIONS);
+        await this.find_single_musics();
+
+        console.log(this.musicUrls.single_musics);
 
 
+    }
+
+    private async find_single_musics() {
+        const SELECTOR = "div.biartpost:nth-child(3) > ul:nth-child(2)";
+        const ul = await this.page?.waitForSelector(SELECTOR);
+        const urls = (await ul?.$$("li"))!.map(async li => {
+            const music: IMusic = {
+                name: "",
+                url: ""
+            };
+            try {
+                music.name = (await((await (await li!.$("strong"))!.getProperty("textContent"))!.jsonValue()))!;
+                music.url = (await((await (await li!.$("a"))!.getProperty("href"))!.jsonValue()))!;
+            } catch (err){
+                if (err instanceof Error)
+                    console.error(err.message);
+            }
+            return music;
+        });
+        this.musicUrls.single_musics = await Promise.all(urls);
     }
 
 }
