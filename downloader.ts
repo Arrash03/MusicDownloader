@@ -3,10 +3,10 @@ import fs from "fs";
 import path from "path";
 
 export default class Downloader {
-    private downloadPath: string;
+    private _downloadPath: string;
     private isDownloading: boolean;
     constructor(downloadPath: string) {
-        this.downloadPath = downloadPath;
+        this._downloadPath = downloadPath;
         this.isDownloading = false;
     }
     public async download(url: string, fileName: string) {
@@ -20,7 +20,7 @@ export default class Downloader {
                     throw new Error(`Failed to download file. Status: ${response.status}`);
                 }
 
-                const fileStream = fs.createWriteStream(path.join(this.downloadPath, fileName));
+                const fileStream = fs.createWriteStream(path.join(this._downloadPath, fileName));
                 response.data.pipe(fileStream);
 
                 await new Promise((resolve, reject) => {
@@ -36,15 +36,15 @@ export default class Downloader {
                 this.isDownloading = false;
             }
     }
-    public setDownloadPath(path: string) {
+    public downloadPath(path: string) {
         let result = false;
         if (!this.isDownloading) {
-            this.downloadPath = path;
+            this._downloadPath = path;
             result = true;
         }
         return result;
     }
-    public getDownloadPath() {
-        return this.downloadPath;
-    }
+    // public downloadPath() {
+    //     return this._downloadPath;
+    // }
 }
