@@ -34,9 +34,8 @@ export default class BiaMusic {
         // it need to be base on page numbers and connection speed
         timeout: 30000
     };
-    private static readonly MAX_CONCURRENT_DOWNLOAD_FILE = 5;
-
     static browser: SingleBrowser;
+
     private readonly _url: string;
     private _musicUrls: IMusicUrls;
     private readonly _singerName: string;
@@ -164,7 +163,6 @@ export default class BiaMusic {
                             url: ""
                         };
                         try {
-                            await sleep(1000);
                             music = {
                                 name: (await (await (await li!.waitForSelector("strong"))!.getProperty("textContent"))!.jsonValue())!,
                                 url: (await (await (await li!.waitForSelector("a"))!.getProperty("href"))!.jsonValue())!
@@ -202,24 +200,44 @@ export default class BiaMusic {
         if (!this._downloader)
             this._downloader = new Downloader(SINGLE_MUSIC_PATH)
         await this.downloadSingleMusics();
+        await this.downloadAlbumMusic(ALBUM_PATH);
     }
 
     private async downloadSingleMusics() {
-        let queue = [];
-        for (let i = 0; i < this._musicUrls.single_musics.length; i += BiaMusic.MAX_CONCURRENT_DOWNLOAD_FILE) {
-            queue = Array.from(Array(BiaMusic.MAX_CONCURRENT_DOWNLOAD_FILE).keys())
-                .map(async (_, index) => {
-                    if (i + index >= this._musicUrls.single_musics.length)
-                        return;
-                    let music = this._musicUrls.single_musics[i + index];
-                    try {
-                        await this._downloader!.download(music.url, `${music.name}.mp3`)
-                    } catch (err) {
-                        if (err instanceof Error)
-                            console.error(err.message)
+        let res: null | void = null;
+        for (const music of this._musicUrls.single_musics) {
+            try {
+                while (res === null) {
+                    res = await this._downloader!.download(music.url, `${music.name}.mp3`);
+                    // it could be changed dynamically
+                    await sleep(100);
+                }
+            } catch (err) {
+                if (err instanceof Error)
+                    console.warn(err.message)
+            }
+            res = null;
+        }
+    }
+
+    private async downloadAlbumMusic(albumPath: string) {
+        let res: null | void = null;
+        for (const album of this._musicUrls.album_musics) {
+            for (const music of album.musics) {
+                if (!fs.existsSync(path.join(albumPath, album.name)))
+                    await fsPromise.mkdir(path.join(albumPath, album.name));
+                try {
+                    while (res === null) {
+                        res = await this._downloader!.download(music.url, `${music.name}.mp3`);
+                        // it could be changed dynamically
+                        await sleep(100);
                     }
-                });
-            await Promise.all(queue);
+                } catch (err) {
+                    if (err instanceof Error)
+                        console.warn(err.message)
+                }
+                res = null;
+            }
         }
     }
 
