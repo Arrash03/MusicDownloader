@@ -15,11 +15,13 @@ export default class SingleBrowser {
     public static readonly MAX_OPEN_TAB = 5;
     public static instance: SingleBrowser | null = null;
     private browser: Browser;
+    private isFirstTime: boolean;
     // private pages: IPage[]
 
 
     private constructor(browser: Browser) {
         this.browser = browser;
+        this.isFirstTime = true;
         // this.pages = []
     }
 
@@ -34,7 +36,10 @@ export default class SingleBrowser {
     // could add options
     public async createNewPage(): Promise<Page | null> {
         let page: Page | null = null
-        if ((await this.browser.pages()).length <= SingleBrowser.MAX_OPEN_TAB) {
+        if (this.isFirstTime) {
+            page = (await this.browser.pages())[0];
+            this.isFirstTime = false;
+        } else if ((await this.browser.pages()).length <= SingleBrowser.MAX_OPEN_TAB) {
             page = await this.browser.newPage();
             await page.setViewport({width: 1920, height: 1080});
         }

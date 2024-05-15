@@ -4,19 +4,20 @@ import fs from "fs";
 import fsPromise from 'fs/promises';
 import path from "path";
 import SingleBrowser from "./singleBrowser.js";
+import {sleep} from "./tools.js";
 
-interface IMusic {
+interface ILink {
     name: string,
     url: string
 }
 
 interface IAlbum {
     name: string,
-    musics: IMusic[]
+    musics: ILink[]
 }
 
 interface IMusicUrls {
-    single_musics: IMusic[],
+    single_musics: ILink[],
     album_musics: IAlbum[]
 }
 
@@ -65,7 +66,7 @@ export default class BiaMusic {
     private async createPage() {
         let newPage: Page | null = null;
         while (newPage === null) {
-            newPage = await BiaMusic.browser.createNewPage()
+            newPage = await BiaMusic.browser.createNewPage();
         }
         return newPage
     }
@@ -74,18 +75,18 @@ export default class BiaMusic {
         await BiaMusic.createBrowser();
         this._page = await this.createPage();
         await this._page!.goto(this._url, BiaMusic.GO_TO_OPTIONS);
-        await this.findSingleMusics();
+        // await this.findSingleMusicsDownloadUrl();
+        await this.findAlbumDownloadUrl();
 
-        console.log(this._musicUrls.single_musics, this._musicUrls.single_musics.length);
+        console.log(this._musicUrls, this._musicUrls.single_musics.length + this._musicUrls.album_musics.length);
 
 
     }
 
-    private async findSingleMusics() {
-        const SELECTOR = "div.biartpost:nth-child(3) > ul:nth-child(2)";
-        const ul = await this._page?.waitForSelector(SELECTOR);
+    private async findMusicPagesUrl(selector: string) {
+        const ul = await this._page?.waitForSelector(selector);
         let temp = (await ul?.$$("li"))!.map(async li => {
-            const music: IMusic = {
+            const music: ILink = {
                 name: "",
                 url: ""
             };
@@ -98,14 +99,16 @@ export default class BiaMusic {
             }
             return music;
         });
-        const urls = await Promise.all(temp);
-        this._musicUrls.single_musics = await this.findSingleMusicsDownloadUrl(urls);
+        return await Promise.all(temp);
     }
 
-    private async findSingleMusicsDownloadUrl(urls: IMusic[]) {
+    // @ts-ignore
+    private async findSingleMusicsDownloadUrl() {
+        const SELECTOR = "div.biartpost:nth-child(3) > ul:nth-child(2)";
+        const urls = await this.findMusicPagesUrl(SELECTOR);
         const temp = [];
         for (let i = 0; i < SingleBrowser.MAX_OPEN_TAB; i++) {
-            temp.push(BiaMusic.browser.createNewPage());
+            temp.push(this.createPage());
         }
         // right now just this scraper works so none of them will be null
         const pages = await Promise.all(temp);
@@ -133,7 +136,60 @@ export default class BiaMusic {
             await Promise.all(queue);
         }
         // just need to set it is not busy
-        return urls;
+        this._musicUrls.single_musics = urls;
+    }
+
+    // @ts-ignore
+    private async findAlbumDownloadUrl() {
+        const SELECTOR = "div.biartpost:nth-child(4) > ul:nth-child(2)";
+        const albums: IAlbum[] = [];
+        const urls = await this.findMusicPagesUrl(SELECTOR);
+        const temp = [];
+        for (let i = 0; i < SingleBrowser.MAX_OPEN_TAB; i++) {
+            temp.push(this.createPage());
+        }
+        // right now just this scraper works so none of them will be null
+        const pages = await Promise.all(temp);
+        let queue = [];
+        for (let i = 0; i < urls.length; i += SingleBrowser.MAX_OPEN_TAB) {
+            queue = pages.map(async (page, index) => {
+                try {
+                    if (i + index >= urls.length)
+                        return;
+                    await page!.goto(urls[i + index]?.url, BiaMusic.GO_TO_OPTIONS);
+                    const SELECTOR = ".bialbum";
+                    let temp = (await (await page.waitForSelector(SELECTOR))?.$$("li:nth-child(odd)"))?.map(async li => {
+                        let music: ILink = {
+                            name: "",
+                            url: ""
+                        };
+                        try {
+                            await sleep(1000);
+                            music = {
+                                name: (await (await (await li!.waitForSelector("strong"))!.getProperty("textContent"))!.jsonValue())!,
+                                url: (await (await (await li!.waitForSelector("a"))!.getProperty("href"))!.jsonValue())!
+                            }
+                        } catch (err) {
+                            console.info(urls[i + index]?.url);
+                            if (err instanceof Error)
+                                console.warn(err.message);
+                        }
+                        return music;
+                    })
+                    const album: IAlbum = {
+                        name: urls[i + index].name,
+                        musics: await Promise.all(temp!)
+                    };
+                    albums.push(album);
+                } catch (err) {
+                    if (err instanceof Error)
+                        console.error(err.message);
+                }
+            });
+            await Promise.all(queue);
+        }
+        // just need to set it is not busy
+        this._musicUrls.album_musics = albums;
     }
 
     public async download(downloadPath: string) {
