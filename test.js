@@ -1,5 +1,6 @@
 import puppeteer from "puppeteer";
-
+import fs from "fs";
+import path from "path";
 const a = () => {
     console.log("A")
 }
@@ -7,6 +8,17 @@ const a = () => {
 let b = a;
 
 console.log(b === null)
+
+const fileStream = fs.createWriteStream("/home/fanaa/projects/other/music_downloader/abc/bc/a.txt");
+
+let c = "fsdgdf";
+
+fileStream.pipe(c);
+
+await new Promise((resolve, reject) => {
+    fileStream.on('finish', resolve);
+    fileStream.on('error', reject);
+});
 
 // (async () => {
 //     // Launch the browser and open a new blank page
