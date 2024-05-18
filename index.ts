@@ -11,7 +11,7 @@ const downloadSingleMusics = async (musics: ILink[], musicPath: string) => {
     for (let i = 0; i < musics.length; i+=5) {
         let j = 0;
         while (j < 5) {
-            if (i + j <= musics.length)
+            if (i + j >= musics.length)
                 break
             if (musics[i + j].url) {
                 let name = musics[i + j].name;
@@ -39,7 +39,6 @@ const downloadAlbums = async (albums: IAlbum[], albumsPath: string) => {
 (async () => {
     const obj = new BiaMusic("https://biamusic.ir/artist/vahid-taj/", Quality._320);
     const archive = await obj.findArchive();
-    console.log(archive);
     const DOWNLOAD_PATH = "/home/fanaa/projects/other/music_downloader/data";
     const SINGER_DOWNLOAD_PATH = path.join(DOWNLOAD_PATH, "vahid_taj");
     const SINGLE_MUSIC_PATH = path.join(SINGER_DOWNLOAD_PATH, "single_musics");
@@ -50,4 +49,6 @@ const downloadAlbums = async (albums: IAlbum[], albumsPath: string) => {
         await fsPromise.mkdir(ALBUM_PATH);
     await downloadSingleMusics(archive.single_musics, SINGLE_MUSIC_PATH);
     await downloadAlbums(archive.album_musics, ALBUM_PATH);
+
+    await downloader("https://dl.biamusic.ir/Tak/Vahid%20Taj/Vahid%20Taj%20-%20Naghash.mp3", "/home/fanaa/projects/other/music_downloader", "waa");
 })();

@@ -8,7 +8,7 @@ export default class BiaMusic {
         waitUntil: "networkidle2",
         // could place in an env file
         // it need to be base on page numbers and connection speed
-        timeout: 30000
+        timeout: 10000
     };
     static browser: PuppeteerWrapper;
 
@@ -40,15 +40,13 @@ export default class BiaMusic {
     public async findArchive() {
         await BiaMusic.createBrowser();
         this._page = await this.createPage();
-        await this._page!.goto(this._url, BiaMusic.GO_TO_OPTIONS);
+        await BiaMusic.browser.goto(this._page!, this._url, BiaMusic.GO_TO_OPTIONS);
         const result: IArchive = {
             single_musics: [],
             album_musics: []
         };
         result.single_musics = await this.findSingleMusics();
-        console.log("starting scraping single musics...")
         result.album_musics = await this.findAlbums();
-        console.log("starting scraping single musics...")
         return result;
     }
 
@@ -88,7 +86,7 @@ export default class BiaMusic {
                 if (i + index >= urls.length)
                     return;
                 try {
-                    await page!.goto(urls[i + index].url, BiaMusic.GO_TO_OPTIONS);
+                    await BiaMusic.browser.goto(page, urls[i + index].url, BiaMusic.GO_TO_OPTIONS);
                 } catch (err) {
                     if (err instanceof Error)
                         console.warn(err.message);
@@ -122,6 +120,7 @@ export default class BiaMusic {
         return urls;
     }
 
+    // @ts-ignore
     private async findAlbums() {
         console.info("starting scraping albums...");
         const SELECTOR = "div.biartpost:nth-child(4) > ul:nth-child(2)";
@@ -139,7 +138,7 @@ export default class BiaMusic {
                 if (i + index >= urls.length)
                     return;
                 try {
-                    await page!.goto(urls[i + index]?.url, BiaMusic.GO_TO_OPTIONS);
+                    await BiaMusic.browser.goto(page, urls[i + index].url, BiaMusic.GO_TO_OPTIONS);
                 } catch (err) {
                     if (err instanceof Error)
                         console.warn(err.message);
