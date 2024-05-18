@@ -3,4 +3,4 @@ package-lock.json
 dist
 data
 
-./test.js
+test.js
