@@ -5,7 +5,7 @@ export default class PuppeteerWrapper {
     public static readonly BROWSER_CONFIGS: PuppeteerLaunchOptions = {
         product: "firefox",
         protocol: "webDriverBiDi",
-        headless: false
+        headless: true
     };
     public static readonly MAX_OPEN_TAB = 5;
     public static instance: PuppeteerWrapper | null = null;
