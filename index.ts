@@ -39,7 +39,8 @@ const downloadAlbums = async (albums: IAlbum[], albumsPath: string) => {
 (async () => {
     const obj = new BiaMusic("https://biamusic.ir/artist/vahid-taj/", Quality._320);
     const archive = await obj.findArchive();
-    const DOWNLOAD_PATH = "/home/fanaa/projects/other/music_downloader/data";
+    await obj.finish();
+    const DOWNLOAD_PATH = path.join(__dirname, "data");
     const SINGER_DOWNLOAD_PATH = path.join(DOWNLOAD_PATH, "vahid_taj");
     const SINGLE_MUSIC_PATH = path.join(SINGER_DOWNLOAD_PATH, "single_musics");
     const ALBUM_PATH = path.join(SINGER_DOWNLOAD_PATH, "albums");

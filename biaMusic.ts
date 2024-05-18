@@ -1,5 +1,5 @@
 import {GoToOptions, Page} from "puppeteer";
-import PuppeteerWrapper from "./singleBrowser.js";
+import PuppeteerWrapper from "./puppeteerWrapper.js";
 import {IAlbum, IArchive, ILink, Quality} from "./music.js";
 
 export default class BiaMusic {
@@ -177,6 +177,10 @@ export default class BiaMusic {
         }))
         // just need to set it is not busy
         return albums;
+    }
+
+    public async finish() {
+        await BiaMusic.browser.close();
     }
 
     get quality(): Quality {

@@ -74,4 +74,8 @@ export default class PuppeteerWrapper {
 
         }
     }
+
+    public async close() {
+        await this.browser.close();
+    }
 }
